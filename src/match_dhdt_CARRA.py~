@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+
+@author: Adrien Wehrlé, University of Zurich, Switzerland
+
+"""
+
+from netCDF4 import Dataset
+
+# read data
+fn = "./C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc"
+nc2 = Dataset(fn, "r")
+print(nc2.variables)
+time = nc2.variables["time"]
