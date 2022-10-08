@@ -108,3 +108,5 @@ dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
 
 # match
 indexes = gm.match_m2m(CARRA_grid_m, dhdt_grid_m, only_indexes=True)
+
+dhdt_on_CARRA = dhdt_grid_m[:, :, 2][indexes]
