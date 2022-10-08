@@ -83,7 +83,7 @@ lat = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_lat_1269x1069.npy", dtype=np.float32
 )
 lat_mat = lat.reshape(ni, nj)[::-1]
-clat_mat = lat.reshape(ni, nj)
+lat_CARRA = lat.reshape(ni, nj)
 
 lon = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_lon_1269x1069.npy", dtype=np.float32
@@ -91,17 +91,20 @@ lon = np.fromfile(
 lon_mat = lon.reshape(ni, nj)[::-1]
 
 lon_pn = lon360_to_lon180(lon)
-clon_mat = lon_pn.reshape(ni, nj)
+lon_CARRA = lon_pn.reshape(ni, nj)
 
 elev = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_elev_1269x1069.npy", dtype=np.float32
 )
-elev = elev.reshape(ni, nj)
+elev_CARRA = elev.reshape(ni, nj)
 
 # %% prepare data and apply geomatcher
 
 # reproject to meter space
-CARRA_grid = np.dstack([clon_mat, clat_mat, elev])
-dhdt_grid = np.dstack([clon_mat, clat_mat, dhdt_sum])
+CARRA_grid = np.dstack([lon_CARRA, lat_CARRA, elev_CARRA])
+dhdt_grid = np.dstack([lon_dhdt, lat_dhdt, dhdt_sum])
 CARRA_grid_m = gm.convert_grid_coordinates(CARRA_grid, "4326", "3413")
-CARRA_grid_m = gm.convert_grid_coordinates(CARRA_grid, "4326", "3413")
+dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
+
+# match
+indexes = gm.match_m2m(CARRA_grid_m, dhdt_grid_m, only_indexes=True)
