@@ -15,11 +15,22 @@ import numpy as np
 import os
 from glob import glob
 from netCDF4 import Dataset
-
 # from mpl_toolkits.basemap import Basemap
 import pandas as pd
-from datetime import datetime
+from datetime import datetime 
 import netCDF4
+
+font_size=10
+th=1
+# plt.rcParams['font.sans-serif'] = ['Georgia']
+plt.rcParams['axes.facecolor'] = 'white'
+plt.rcParams['axes.edgecolor'] = 'black'
+plt.rcParams['axes.grid'] = False
+plt.rcParams['grid.alpha'] = 1
+co=0.9; plt.rcParams['grid.color'] = (co,co,co)
+plt.rcParams["font.size"] = font_size
+plt.rcParams['legend.fontsize'] = font_size*0.8
+plt.rcParams['mathtext.default'] = 'regular'
 
 # CARRA grid info
 # Lambert_Conformal()
@@ -33,84 +44,92 @@ import netCDF4
 #     longitudeOfFirstGridPointInDegrees: 302.903
 #     latitudeOfFirstGridPointInDegrees: 55.81
 
-AW = 0
-
-if not AW:
-    path = "/Users/jason/Dropbox/Surface_Elevation_Change/"
-    os.chdir(path)
-
+AW=0
+path='/Users/jason/Dropbox/DEM_4D/'
+os.chdir(path)
 # --------------------------------------------
 
-ly = "x"
+ly='x'
 
 # global plot settings
-th = 1
-font_size = 16
-plt.rcParams["axes.facecolor"] = "k"
-plt.rcParams["axes.edgecolor"] = "k"
+th=1
+font_size=16
+plt.rcParams['axes.facecolor'] = 'k'
+plt.rcParams['axes.edgecolor'] = 'k'
 plt.rcParams["font.size"] = font_size
 
 # read data
-fn = "./C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc"
-nc2 = Dataset(fn, "r")
+fn='./raw/C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc'
+nc2 = Dataset(fn, 'r')
 print(nc2.variables)
-time = nc2.variables["time"]
+time=nc2.variables['time']
 
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 
 # time_convert = netCDF4.num2date(time[:], time.units, time.calendar)
 
-n_months = np.shape(nc2.variables["dhdt"])[2]
+n_months=np.shape(nc2.variables['dhdt'])[2]
 
-#   is more precise (e.g. days = int(9465.0))
+                            #   is more precise (e.g. days = int(9465.0))
 
-start = date(1990, 1, 1)  # This is the "days since" part
+start = date(1990,1,1)      # This is the "days since" part
 
 # print(type(offset))         # >>>  <class 'datetime.date'>
 
-nj = 123
-ni = 65
+nj=123 ; ni=65
 #%%
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-dhdt_sum = np.zeros((nj, ni))
+dhdt_sum=np.zeros((nj,ni))
 
-mask = np.flipud(np.array(nc2.variables["land_mask"][:, :]))
+mask = np.flipud(np.array(nc2.variables['land_mask'][:,:]))
 # for i in range(n_months):
+datestrings=[]
 for i in range(n_months):
+    
+    delta = relativedelta(months=+i)     # Create a time delta object from the number of days
 
-    delta = relativedelta(
-        months=+i
-    )  # Create a time delta object from the number of days
+    offset = start + delta      # Add the specified number of days to 1990
+    
+    datestring=offset.strftime('%Y-%m-%d')
+    datestrings.append(datestring)
+    # print(datestring)               # >>>  2015-12-01
 
-    offset = start + delta  # Add the specified number of days to 1990
+    dhdt = np.flipud(np.array(nc2.variables['dhdt'][:,:,i]))
+    dhdt[mask==0]=np.nan
+    dhdt_sum+=dhdt
+    
+DPIs=[200]
 
-    datestring = offset.strftime("%Y-%m-%d")
+fig, ax = plt.subplots(figsize=(9,11))
 
-    print(datestring)  # >>>  2015-12-01
+# plt.figure()
+# ax = plt.gca()
 
-    dhdt = np.flipud(np.array(nc2.variables["dhdt"][:, :, i]))
-    dhdt[mask == 0] = np.nan
-    dhdt_sum += dhdt
-
-DPIs = [200]
-
-plt.close()
-plt.imshow(dhdt_sum, vmin=-350, vmax=150)
-plt.title(datestring)
-plt.axis("off")
-plt.colorbar()
-
-ly = "x"
-if ly == "p":
+# plt.close()
+im=ax.imshow(dhdt_sum,cmap='bwr',vmin=-350,vmax=150)
+# ax.set_title(datestrings[0]+' to '+datestring)
+ax.axis('off')
+# plt.colorbar()    
+# 
+# divider = make_axes_locatable(ax)
+# cax = divider.append_axes("right",shrink=0.5)
+   
+plt.colorbar(im,shrink=0.5, pad=0.05)
+# clb = plt.colorbar(im, cax=cax, pad=0.04)
+# clb.ax.set_title('m',fontsize=font_size,c='k')
+ly='p'
+if ly =='p':
     # os.system('mkdir -p '+'./Figs/daily/max in sep to oct range/')
     # figpath='./Figs/daily/max in sep to oct range/'
-    figpath = "/Users/jason/0_dat/Surface_Elevation_Change/Figs/"
-    os.system("mkdir -p " + figpath)
+    figpath='./Figs/'
+    os.system('mkdir -p '+figpath)
 
     for DPI in DPIs:
-        plt.savefig(figpath + datestring + ".png", bbox_inches="tight", dpi=DPI)
+        plt.savefig(figpath+datestring+'.png', bbox_inches='tight', dpi=DPI)
 
+print(np.nanmin(dhdt_sum))
 #%%
 
 import numpy as np
@@ -125,41 +144,39 @@ from datetime import datetime
 
 # %% CARRA coordinates
 
-
 def lon360_to_lon180(lon360):
 
-    # reduce the angle
-    lon180 = lon360 % 360
-
-    # force it to be the positive remainder, so that 0 <= angle < 360
-    lon180 = (lon180 + 360) % 360
-
-    # force into the minimum absolute value residue class, so that -180 < angle <= 180
+    # reduce the angle  
+    lon180 =  lon360 % 360 
+    
+    # force it to be the positive remainder, so that 0 <= angle < 360  
+    lon180 = (lon180 + 360) % 360;  
+    
+    # force into the minimum absolute value residue class, so that -180 < angle <= 180  
     lon180[lon180 > 180] -= 360
-
+    
     return lon180
 
-
 # CARRA West grid dims
-ni = 1269
-nj = 1069
+ni = 1269 ; nj = 1069
 
 # read lat lon arrays
-fn = "/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_lat_1269x1069.npy"
+fn = '/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_lat_1269x1069.npy'
 lat = np.fromfile(fn, dtype=np.float32)
 lat_mat = lat.reshape(ni, nj)[::-1]
 clat_mat = lat.reshape(ni, nj)
 
-fn = "/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_lon_1269x1069.npy"
+fn = '/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_lon_1269x1069.npy'
 lon = np.fromfile(fn, dtype=np.float32)
 lon_mat = lon.reshape(ni, nj)[::-1]
 
 lon_pn = lon360_to_lon180(lon)
-clon_mat = lon_pn.reshape(ni, nj)
+clon_mat = lon_pn.reshape(ni, nj) 
 
-fn = "/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_elev_1269x1069.npy"
+fn = '/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/meta/CARRA/2.5km_CARRA_west_elev_1269x1069.npy'
 elev = np.fromfile(fn, dtype=np.float32)
-elev = elev.reshape(ni, nj)
+elev = elev.reshape(ni, nj) 
+
 
 
 # fn='./meta/CARRA/CARRA_W_domain_ice_mask.nc'
@@ -168,38 +185,33 @@ elev = elev.reshape(ni, nj)
 
 # %% reproject 4326 (lat/lon) CARRA coordinates to 3413 (orth polar projection in meters)
 
-# from lat/lon to meters
-inProj = Proj(init="epsg:4326")
-outProj = Proj(init="epsg:3413")
+#from lat/lon to meters
+inProj = Proj(init='epsg:4326')
+outProj = Proj(init='epsg:3413')
 
 x1, y1 = clon_mat.flatten(), clat_mat.flatten()
 cx, cy = transform(inProj, outProj, x1, y1)
-cx_mat = cx.reshape(ni, nj)
+cx_mat = cx.reshape(ni, nj) 
 cy_mat = cy.reshape(ni, nj)
 
-cols, rows = np.meshgrid(
-    np.arange(np.shape(clat_mat)[1]), np.arange(np.shape(clat_mat)[0])
-)
+cols, rows = np.meshgrid(np.arange(np.shape(clat_mat)[1]), 
+                         np.arange(np.shape(clat_mat)[0]))
 
-CARRA_positions = pd.DataFrame(
-    {
-        "rowc": rows.ravel(),
-        "colc": cols.ravel(),
-        "xc": cx_mat.ravel(),
-        "yc": cy_mat.ravel(),
-    }
-)
+CARRA_positions = pd.DataFrame({'rowc': rows.ravel(),
+                                'colc': cols.ravel(),
+                                'xc': cx_mat.ravel(),
+                                'yc': cy_mat.ravel()})
 
 # ,
 # 'maskc': mask.flatten()}
-# import CARRA datset
+#import CARRA datset
 # ds = xr.open_dataset(raw_path+'tp_2012.nc')
 # CARRA_data = np.array(ds.tp[0, :, :]).flatten()
 
 #%%
 # import sys
 
-# CARRA_grid = np.dstack((lon_mat, lat_mat,
+# CARRA_grid = np.dstack((lon_mat, lat_mat, 
 #                         elev))
 
 
@@ -207,17 +219,17 @@ CARRA_positions = pd.DataFrame(
 # import geomatcher.geomatcher as gm
 # CARRA_grid_ll = gm.convert_grid_coordinates(CARRA_grid)
 
-# %% load dhdt info
+# %% load dhdt info 
 
-fn = "./C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc"
-ds = xr.open_dataset(fn)
+fn='./C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc'
+ds=xr.open_dataset(fn)
 
-# from lat/lon to meters
-inProj = Proj(init="epsg:4326")
-outProj = Proj(init="epsg:3413")
+#from lat/lon to meters
+inProj = Proj(init='epsg:4326')
+outProj = Proj(init='epsg:3413')
 
-niE = np.shape(ds.lat.values)[1]
-njE = np.shape(ds.lon.values)[0]
+niE=np.shape(ds.lat.values)[1]
+njE=np.shape(ds.lon.values)[0]
 print(np.shape(ds.lon))
 
 # niE = 1269 ; njE = 1069
@@ -225,36 +237,31 @@ print(np.shape(ds.lon))
 lat_mesh, lon_mesh = np.meshgrid(ds.lat.values, ds.lon.values)
 x1, y1 = lon360_to_lon180(lon_mesh.flatten()), lat_mesh.flatten()
 ex, ey = transform(inProj, outProj, x1, y1)
-ex_mat = ex.reshape(niE, njE)
+ex_mat = ex.reshape(niE, njE) 
 ey_mat = ey.reshape(niE, njE)
 
-cols2, rows2 = np.meshgrid(
-    np.arange(np.shape(ds.lat.values)[0]), np.arange(np.shape(ds.lon.values)[1])
-)
+cols2, rows2 = np.meshgrid(np.arange(np.shape(ds.lat.values)[0]), np.arange(np.shape(ds.lon.values)[1]))  
 lat_e, lon_e = np.meshgrid(ds.lat.values, ds.lon.values)
-ERA5_positions = pd.DataFrame(
-    {
-        "row_e": rows2.ravel(),
-        "col_e": cols2.ravel(),
-        "lon_e": lon_e.ravel(),
-        "lat_e": lat_e.ravel(),
-    }
-)
+ERA5_positions = pd.DataFrame({
+"row_e": rows2.ravel(),
+"col_e": cols2.ravel(),
+"lon_e": lon_e.ravel(),
+"lat_e": lat_e.ravel(),})
 
 #%%
 
-steps = ["-21", "-00", "-03", "-06"]
-steps = ["00", "01", "02", "03"]
-times = ds.variables["time"]
-dates = []
+steps=['-21','-00','-03','-06']
+steps=['00','01','02','03']
+times=ds.variables['time']
+dates=[]
 # date_strings=[]
 # str_dates = [i.strftime("%Y-%m-%dT%H:%M") for i in time]
-for i, time in enumerate(times):
+for i,time in enumerate(times):
     for step in range(4):
         # print(str(np.array(time)))
-        timex = pd.to_datetime(times[i].to_numpy())
-        timex = pd.date_range(timex) + pd.Timedelta(hours=step * 3)
-        timex = timex[0].strftime("%Y-%m-%d-%H")
+        timex=pd.to_datetime(times[i].to_numpy())
+        timex=pd.date_range(timex) + pd.Timedelta(hours=step*3)
+        timex=timex[0].strftime('%Y-%m-%d-%H')
         print(timex)
 
         # dates.append(str(np.array(time)))
@@ -263,69 +270,63 @@ for i, time in enumerate(times):
         # date_strings.append(temp)
         # dates.append(datetime.strptime(temp, "%Y-%m-%dT%H"))
         # print(date_time_obj)
-
+    
         # print(x.strftime("%Y-%m-%dT%H:%M"))
         # print(date_strings)
-
+        
         # dtime=pd.to_datetime(date_strings,format="%Y-%m-%dT%H")
+        
+        choice='tp'
+        choice='mtpr'
 
-        choice = "tp"
-        choice = "mtpr"
-
-        if choice == "t2m":
-            ERA_data = np.array(ds.t2m[i, :, :]) - 273.15
-        if choice == "tp":
-            ERA_data = np.array(ds.tp[i, step, :, :]) * 1000
-        if choice == "mtpr":
-            ERA_data = np.array(ds.mtpr[i, step, :, :]) * 3 * 3600
+            
+        if choice=='t2m':
+            ERA_data = np.array(ds.t2m[i, :, :])-273.15
+        if choice=='tp':
+            ERA_data = np.array(ds.tp[i,step, :, :])*1000
+        if choice=='mtpr':
+            ERA_data = np.array(ds.mtpr[i,step, :, :])*3*3600     
         # print(np.shape(ERA_data))
-
+        
+        
         #  nearest neighbours
-
-        # dataset to be upscaled -> ERA5
-        nA = np.column_stack((ex_mat.ravel(), ey_mat.ravel()))
-        # dataset to provide the desired grid -> CARRA
+        
+        #dataset to be upscaled -> ERA5
+        nA = np.column_stack((ex_mat.ravel(), ey_mat.ravel()) ) 
+        #dataset to provide the desired grid -> CARRA
         nB = np.column_stack((cx_mat.ravel(), cy_mat.ravel()))
-
-        btree = cKDTree(nA)  # train dataset
-        dist, idx = btree.query(nB, k=1)  # apply on grid
-
-        # collocate matching cells
+        
+        btree = cKDTree(nA)  #train dataset
+        dist, idx = btree.query(nB, k=1)  #apply on grid
+        
+        #collocate matching cells
         CARRA_cells_for_ERA5 = ERA5_positions.iloc[idx]
-
+        
         # Output resampling key ERA5 data in CARRA grid
-        path_tools = "/tmp/"
-        CARRA_cells_for_ERA5.to_pickle(path_tools + "resampling_key_ERA5_to_CARRA.pkl")
-
-        outpath = "/Users/jason/0_dat/ERA5/events/resampled/" + choice + "/"
-        os.system("mkdir -p " + outpath)
-
+        path_tools='/tmp/'
+        CARRA_cells_for_ERA5.to_pickle(path_tools+'resampling_key_ERA5_to_CARRA.pkl')
+        
+        outpath='/Users/jason/0_dat/ERA5/events/resampled/'+choice+'/'
+        os.system('mkdir -p '+outpath)
+    
         #  visualisation
-
-        new_grid = ERA_data[CARRA_cells_for_ERA5.col_e, CARRA_cells_for_ERA5.row_e]
+        
+        new_grid= ERA_data[CARRA_cells_for_ERA5.col_e, CARRA_cells_for_ERA5.row_e]
         new_grid = np.rot90(new_grid.reshape(ni, nj).T)
         plt.close()
-        plt.imshow(new_grid, vmin=0, vmax=6)
+        plt.imshow(new_grid,vmin=0,vmax=6)
         plt.axis("off")
         plt.title(timex)
         plt.colorbar()
-        DPI = 200
-        ly = "p"
-
-        if ly == "p":
-            figpath = "/Users/jason/0_dat/ERA5/events/Figs/"
+        DPI=200
+        ly='p'
+                
+        if ly == 'p':
+            figpath='/Users/jason/0_dat/ERA5/events/Figs/'
             # figpath='/Users/jason/Dropbox/CARRA/CARRA_ERA5_events/Figs/ERA5/'
             # os.system('mkdir -p '+figpath)
-            plt.savefig(
-                figpath + str(timex) + ".png",
-                bbox_inches="tight",
-                pad_inches=0.04,
-                dpi=DPI,
-                facecolor="w",
-                edgecolor="k",
-            )
+            plt.savefig(figpath+str(timex)+'.png', bbox_inches='tight', pad_inches=0.04, dpi=DPI, facecolor='w', edgecolor='k')
             # plt.savefig(figpath+select_period+'JJA_'+hgt+'z_anom.eps', bbox_inches='tight')
+        
+        new_grid.astype(dtype=np.float16).tofile(outpath+'/'+str(timex)+'_1269x1069.npy',)
 
-        new_grid.astype(dtype=np.float16).tofile(
-            outpath + "/" + str(timex) + "_1269x1069.npy",
-        )

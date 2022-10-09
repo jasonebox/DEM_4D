@@ -10,7 +10,6 @@ import xarray as xr
 import dateutil.relativedelta
 import numpy as np
 import datetime
-from osgeo import gdal
 import os
 
 import sys
@@ -45,7 +44,6 @@ def lon360_to_lon180(lon360):
     return lon180
 
 
-
 # %% read and preprocess dhdt
 
 fn = f"{base_path}/raw/C3S_GrIS_RA_SEC_25km_vers3_2022-08-20.nc"
@@ -53,7 +51,7 @@ ds = xr.open_dataset(fn)
 
 niE = np.shape(ds.lat.values)[1]
 njE = np.shape(ds.lon.values)[0]
-print(np.shape(ds.lon))
+# print(np.shape(ds.lon))
 
 lat_dhdt = ds.lat.values
 lon_dhdt = ds.lon.values
@@ -68,6 +66,7 @@ nj = 123
 ni = 65
 dhdt_sum = np.zeros((nj, ni))
 
+datestrings=[]
 for i in range(n_months):
 
     delta = dateutil.relativedelta.relativedelta(
@@ -77,12 +76,44 @@ for i in range(n_months):
     offset = start + delta  # Add the specified number of days to 1990
 
     datestring = offset.strftime("%Y-%m-%d")
-
-    print(datestring)  # >>>  2015-12-01
+    datestrings.append(datestring)
+    # print(datestring)  # >>>  2015-12-01
 
     dhdt = np.flipud(np.array(ds.variables["dhdt"][:, :, i]))
     dhdt[mask == 0] = np.nan
     dhdt_sum += dhdt
+    
+print(np.nanmin(dhdt_sum))
+
+#%%
+import matplotlib.pyplot as plt
+# from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+font_size=12
+
+fig, ax = plt.subplots(figsize=(9,11))
+
+im=ax.imshow(dhdt_sum,cmap='bwr',vmin=-350,vmax=150)
+ax.set_title(datestrings[0]+' to '+datestring)
+ax.axis('off')
+
+clb = plt.colorbar(im,shrink=0.7, pad=0.04)
+clb.ax.set_title('m',fontsize=14,c='k')
+
+clb.ax.tick_params(labelsize=font_size) 
+clb.ax.set_title('m',fontsize=font_size)
+ly='p'
+if ly =='p':
+    # os.system('mkdir -p '+'./Figs/daily/max in sep to oct range/')
+    # figpath='./Figs/daily/max in sep to oct range/'
+    figpath='./Figs/'
+    os.system('mkdir -p '+figpath)
+
+    DPIs=[200]
+
+    for DPI in DPIs:
+        plt.savefig(figpath+datestring+'.png', bbox_inches='tight', dpi=DPI)
 
 # %% read and preprocess CARRA
 
@@ -90,7 +121,6 @@ for i in range(n_months):
 ni = 1269
 nj = 1069
 
-CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
 
 lat = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_lat_1269x1069.npy", dtype=np.float32
@@ -121,5 +151,37 @@ dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
 
 # match
 indexes = gm.match_m2m_old(CARRA_grid_m, dhdt_grid_m, only_indexes=True)
+#%%
 
+font_size=12
+
+fig, ax = plt.subplots(figsize=(9,11))
+
+# im=ax.imshow(dhdt_sum,cmap='bwr',vmin=-350,vmax=150)
+im=ax.imshow(elev_CARRA,cmap='magam')
+ax.set_title(datestrings[0]+' to '+datestring)
+ax.axis('off')
+
+clb = plt.colorbar(im,shrink=0.7, pad=0.04)
+clb.ax.set_title('m',fontsize=14,c='k')
+
+clb.ax.tick_params(labelsize=font_size) 
+clb.ax.set_title('m',fontsize=font_size)
+ly='x'
+if ly =='p':
+    # os.system('mkdir -p '+'./Figs/daily/max in sep to oct range/')
+    # figpath='./Figs/daily/max in sep to oct range/'
+    figpath='./Figs/'
+    os.system('mkdir -p '+figpath)
+
+    DPIs=[200]
+
+    for DPI in DPIs:
+        plt.savefig(figpath+datestring+'.png', bbox_inches='tight', dpi=DPI)
+#%%
+print(np.shape(indexes))
+
+# dhdt_on_CARRA = dhdt_grid_m[:, :, 2][indexes[:, :, 0], indexes[:, :, 1]]
 dhdt_on_CARRA = dhdt_grid_m[:, :, 2].flatten()[indexes]
+#%%
+plt.imshow(dhdt_on_CARRA)
