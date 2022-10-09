@@ -17,12 +17,12 @@ import os
 import rasterio
 import sys
 
-if os.getlogin() == 'jason':
-    base_path='/Users/jason/Dropbox/DEM_4D/'
+if os.getlogin() == "jason":
+    base_path = "/Users/jason/Dropbox/DEM_4D/"
     sys.path.append("/Users/jason/Dropbox/geomatcher")
     CARRA_path = "/Users/jason/Dropbox/CARRA/CARRA_rain/"
 
-if os.getlogin() == 'adrien':
+if os.getlogin() == "adrien":
     base_path = "/home/adrien/EO-IO/DEM_4D"
     sys.path.append("/home/adrien/EO-IO/geomatcher")
     CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
@@ -85,9 +85,7 @@ elev = np.fromfile(
 )
 elev_CARRA = elev.reshape(ni, nj)
 
-rf = np.fromfile(
-    f"{base_path}/raw/rf_2012_1269x1069_float32.npy", dtype=np.float32
-)
+rf = np.fromfile(f"{base_path}/raw/rf_2012_1269x1069_float32.npy", dtype=np.float32)
 rf = rf.reshape(ni, nj)
 
 # %% prepare data and apply geomatcher
@@ -106,23 +104,27 @@ bedmachine_on_CARRA = bedmachine_grid_m[:, :, 2].flatten()[indexes]
 #%%
 import matplotlib.pyplot as plt
 
-result=np.flipud(bedmachine_on_CARRA)
+result = np.flipud(bedmachine_on_CARRA)
 plt.imshow(result)
 
 #%%
 
-profile = rasterio.open(f"{base_path}/raw/BedMachineGreenland-2017-09-20_surface_500m.tiff").profile
+profile = rasterio.open(
+    f"{base_path}/raw/BedMachineGreenland-2017-09-20_surface_500m.tiff"
+).profile
 
-wo=1
+wo = 1
 
 if wo:
-    with rasterio.open(f"{base_path}./output/bedmachine_on_CARRA.tif", 'w', **profile) as dst:
+    with rasterio.open(
+        f"{base_path}./output/bedmachine_on_CARRA.tif", "w", **profile
+    ) as dst:
         dst.write(result, 1)
 
-    with rasterio.open(f"{base_path}./output/CARRA_elev.tif", 'w', **profile) as dst:
+    with rasterio.open(f"{base_path}./output/CARRA_elev.tif", "w", **profile) as dst:
         dst.write(np.flipud(elev_CARRA), 1)
 
-    with rasterio.open(f"{base_path}./output/CARRA_rf_2012.tif", 'w', **profile) as dst:
+    with rasterio.open(f"{base_path}./output/CARRA_rf_2012.tif", "w", **profile) as dst:
         dst.write(np.flipud(rf), 1)
 
 print("done")

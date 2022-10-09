@@ -16,13 +16,14 @@ from osgeo import gdal
 import os
 import rasterio
 import sys
+from scipy.ndimage import gaussian_filter
 
-if os.getlogin() == 'jason':
-    base_path='/Users/jason/Dropbox/DEM_4D/'
+if os.getlogin() == "jason":
+    base_path = "/Users/jason/Dropbox/DEM_4D/"
     sys.path.append("/Users/jason/Dropbox/geomatcher")
     CARRA_path = "/Users/jason/Dropbox/CARRA/CARRA_rain/"
 
-if os.getlogin() == 'adrien':
+if os.getlogin() == "adrien":
     base_path = "/home/adrien/EO-IO/DEM_4D"
     sys.path.append("/home/adrien/EO-IO/geomatcher")
     CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
@@ -88,7 +89,7 @@ for i in range(n_months):
 #%%
 import matplotlib.pyplot as plt
 
-plt.imshow(dhdt_sum,cmap='bwr')
+plt.imshow(dhdt_sum, cmap="bwr")
 # %% read and preprocess BedMachine
 
 with rasterio.open(
@@ -104,67 +105,63 @@ with rasterio.open(
 
 # %% read and preprocess CARRA
 
-# CARRA West grid dims
-ni = 1269
-nj = 1069
-
-lat = np.fromfile(
-    f"{CARRA_path}/ancil/2.5km_CARRA_west_lat_1269x1069.npy", dtype=np.float32
-)
-lat_mat = lat.reshape(ni, nj)[::-1]
-lat_CARRA = lat.reshape(ni, nj)
-
-lon = np.fromfile(
-    f"{CARRA_path}/ancil/2.5km_CARRA_west_lon_1269x1069.npy", dtype=np.float32
-)
-lon_mat = lon.reshape(ni, nj)[::-1]
-
-lon_pn = lon360_to_lon180(lon)
-lon_CARRA = lon_pn.reshape(ni, nj)
-
-elev = np.fromfile(
-    f"{CARRA_path}/ancil/2.5km_CARRA_west_elev_1269x1069.npy", dtype=np.float32
-)
-elev_CARRA = elev.reshape(ni, nj)
-
-rf = np.fromfile(
-    f"{base_path}/raw/rf_2012_1269x1069_float32.npy", dtype=np.float32
-)
-rf = rf.reshape(ni, nj)
-
 # %% prepare data and apply geomatcher
 
 # reproject to meter space
-CARRA_grid = np.dstack([lon_CARRA, lat_CARRA, elev_CARRA])
-CARRA_grid_m = gm.convert_grid_coordinates(CARRA_grid, "4326", "3413")
+dhdt_grid = np.dstack([lon_dhdt, lat_dhdt, dhdt_sum])
+dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
 
 bedmachine_grid_m = np.dstack([bedmachine_xs, bedmachine_ys, bedmachine])
 
 # match
-indexes = gm.match_m2m_old(CARRA_grid_m, bedmachine_grid_m, only_indexes=True)
+indexes = gm.match_m2m_old(bedmachine_grid_m, dhdt_grid_m, only_indexes=True)
 
-bedmachine_on_CARRA = bedmachine_grid_m[:, :, 2].flatten()[indexes]
+dhdt_on_bedmachine = dhdt_grid_m[:, :, 2].flatten()[indexes]
 
 #%%
 import matplotlib.pyplot as plt
 
-result=np.flipud(bedmachine_on_CARRA)
-plt.imshow(result)
+result = np.flipud(dhdt_on_bedmachine)
+
+result_smoothed = gaussian_filter(result, 20)
+
+bedmachine_grid_m[:, :, 2][
+    bedmachine_grid_m[:, :, 2] == np.nanmin(bedmachine_grid_m[:, :, 2])
+] = np.nan
+
+dz = result + bedmachine_grid_m[:, :, 2]
+
+plt.figure()
+plt.imshow(
+    dz,
+)
+
+dz_smoothed = gaussian_filter(dz, 10, mode="reflect")
+
+# plt.figure()
+# ax1 = plt.subplot(121)
+# ax1.imshow(dz)
+# ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
+# ax1.imshow(dz_smoothed)
 
 #%%
 
-profile = rasterio.open(f"{base_path}/raw/BedMachineGreenland-2017-09-20_surface_500m.tiff").profile
+profile = rasterio.open(
+    f"{base_path}/raw/BedMachineGreenland-2017-09-20_surface_500m.tiff"
+).profile
 
-wo=1
+wo = 1
 
 if wo:
-    with rasterio.open(f"{base_path}./output/bedmachine_on_CARRA.tif", 'w', **profile) as dst:
-        dst.write(result, 1)
+    with rasterio.open(
+        f"{base_path}/output/dz_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz, 1)
 
-    with rasterio.open(f"{base_path}./output/CARRA_elev.tif", 'w', **profile) as dst:
-        dst.write(np.flipud(elev_CARRA), 1)
+    with rasterio.open(
+        f"{base_path}/output/dz_10sig_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz, 1)
 
-    with rasterio.open(f"{base_path}./output/CARRA_rf_2012.tif", 'w', **profile) as dst:
-        dst.write(np.flipud(rf), 1)
 
 print("done")
