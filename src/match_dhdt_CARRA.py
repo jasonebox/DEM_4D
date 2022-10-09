@@ -17,12 +17,12 @@ import os
 
 import sys
 
-if os.getlogin() == 'jason':
-    base_path='/Users/jason/Dropbox/DEM_4D/'
+if os.getlogin() == "jason":
+    base_path = "/Users/jason/Dropbox/DEM_4D/"
     sys.path.append("/Users/jason/Dropbox/geomatcher")
     CARRA_path = "/Users/jason/Dropbox/CARRA/CARRA_rain/"
 
-if os.getlogin() == 'adrien':
+if os.getlogin() == "adrien":
     base_path = "/home/adrien/EO-IO/DEM_4D"
     sys.path.append("/home/adrien/EO-IO/geomatcher")
     CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
@@ -45,7 +45,6 @@ def lon360_to_lon180(lon360):
     lon180[lon180 > 180] -= 360
 
     return lon180
-
 
 
 # %% read and preprocess dhdt

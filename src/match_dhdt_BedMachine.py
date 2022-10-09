@@ -57,8 +57,8 @@ niE = np.shape(ds.lat.values)[1]
 njE = np.shape(ds.lon.values)[0]
 print(np.shape(ds.lon))
 
-lat_dhdt = ds.lat.values
-lon_dhdt = ds.lon.values
+lat_dhdt = np.flipud(ds.lat.values)
+lon_dhdt = np.flipud(ds.lon.values)
 
 n_months = np.shape(ds.variables["dhdt"])[2]
 
@@ -110,9 +110,24 @@ with rasterio.open(
 # reproject to meter space
 dhdt_grid = np.dstack([lon_dhdt, lat_dhdt, dhdt_sum])
 dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
-dhdt_grid_m[:, :, 1] = dhdt_grid_m[:, :, 1][::-1]
 
 bedmachine_grid_m = np.dstack([bedmachine_xs, bedmachine_ys, bedmachine])
+
+plt.figure()
+ax1 = plt.subplot(131)
+ax1.imshow(dhdt_grid_m[:, :, 0])
+ax2 = plt.subplot(132)
+ax2.imshow(dhdt_grid_m[:, :, 1])
+ax3 = plt.subplot(133)
+ax3.imshow(dhdt_grid_m[:, :, 2])
+
+plt.figure()
+ax1 = plt.subplot(131)
+ax1.imshow(bedmachine_grid_m[:, :, 0])
+ax2 = plt.subplot(132)
+ax2.imshow(bedmachine_grid_m[:, :, 1])
+ax3 = plt.subplot(133)
+ax3.imshow(bedmachine_grid_m[:, :, 2])
 
 # match
 indexes = gm.match_m2m_old(bedmachine_grid_m, dhdt_grid_m, only_indexes=True)
@@ -122,7 +137,7 @@ dhdt_on_bedmachine = dhdt_grid_m[:, :, 2].flatten()[indexes]
 #%%
 import matplotlib.pyplot as plt
 
-result = np.flipud(dhdt_on_bedmachine)
+result = dhdt_on_bedmachine.copy()
 
 result_smoothed = gaussian_filter(result, 20)
 
@@ -161,7 +176,7 @@ if wo:
     with rasterio.open(
         f"{base_path}/output/dz_on_bedmachine.tif", "w", **profile
     ) as dst:
-        dst.write(dz, 1)
+        dst.write(np.flipud(dz), 1)
 
     with rasterio.open(
         f"{base_path}/output/dz_10sig_on_bedmachine.tif", "w", **profile
