@@ -110,6 +110,7 @@ with rasterio.open(
 # reproject to meter space
 dhdt_grid = np.dstack([lon_dhdt, lat_dhdt, dhdt_sum])
 dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
+dhdt_grid_m[:, :, 1] = dhdt_grid_m[:, :, 1][::-1]
 
 bedmachine_grid_m = np.dstack([bedmachine_xs, bedmachine_ys, bedmachine])
 
@@ -130,6 +131,10 @@ bedmachine_grid_m[:, :, 2][
 ] = np.nan
 
 dz = result + bedmachine_grid_m[:, :, 2]
+
+dz_filled = dz.copy()
+
+dz_filled[~np.isfinite(dz_filled)] = bedmachine_grid_m[:, :, 2][~np.isfinite(dz_filled)]
 
 plt.figure()
 plt.imshow(
