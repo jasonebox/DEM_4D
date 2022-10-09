@@ -151,12 +151,16 @@ dz_filled = dz.copy()
 
 dz_filled[~np.isfinite(dz_filled)] = bedmachine_grid_m[:, :, 2][~np.isfinite(dz_filled)]
 
+dz_filled_smoothed = gaussian_filter(dz_filled, 10)
+dz_filled_smoothed_15 = gaussian_filter(dz_filled, 15)
+
 plt.figure()
 plt.imshow(
     dz_filled,
 )
 
 dz_smoothed = gaussian_filter(dz, 10, mode="reflect")
+dz_smoothed_15 = gaussian_filter(dz, 15, mode="reflect")
 
 # plt.figure()
 # ax1 = plt.subplot(121)
@@ -181,7 +185,26 @@ if wo:
     with rasterio.open(
         f"{base_path}/output/dz_10sig_on_bedmachine.tif", "w", **profile
     ) as dst:
-        dst.write(dz, 1)
+        dst.write(dz_smoothed, 1)
 
+    with rasterio.open(
+        f"{base_path}/output/dz_15sig_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz_smoothed_15, 1)
+
+    with rasterio.open(
+        f"{base_path}/output/dz_filled_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz_filled, 1)
+
+    with rasterio.open(
+        f"{base_path}/output/dz_filled_10sig_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz_filled_smoothed, 1)
+
+    with rasterio.open(
+        f"{base_path}/output/dz_filled_15sig_on_bedmachine.tif", "w", **profile
+    ) as dst:
+        dst.write(dz_filled_smoothed_15, 1)
 
 print("done")
