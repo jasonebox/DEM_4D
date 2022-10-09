@@ -90,8 +90,6 @@ for i in range(n_months):
 ni = 1269
 nj = 1069
 
-CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
-
 lat = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_lat_1269x1069.npy", dtype=np.float32
 )
@@ -123,3 +121,8 @@ dhdt_grid_m = gm.convert_grid_coordinates(dhdt_grid, "4326", "3413")
 indexes = gm.match_m2m_old(CARRA_grid_m, dhdt_grid_m, only_indexes=True)
 
 dhdt_on_CARRA = dhdt_grid_m[:, :, 2].flatten()[indexes]
+
+#%%
+import matplotlib.pyplot as plt
+
+plt.imshow(dhdt_on_CARRA)
