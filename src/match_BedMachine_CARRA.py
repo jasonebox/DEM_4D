@@ -4,17 +4,32 @@
 
 @author: Adrien Wehrlé, University of Zurich, Switzerland
 
+and Jason Box
+
 """
 
 import xarray as xr
 import dateutil.relativedelta
 import numpy as np
 import datetime
+from osgeo import gdal
+import os
 import rasterio
-
 import sys
 
-sys.path.append("/home/adrien/EO-IO/geomatcher")
+if os.getlogin() == 'jason':
+    base_path='/Users/jason/Dropbox/DEM_4D/'
+    sys.path.append("/Users/jason/Dropbox/geomatcher")
+    CARRA_path = "/Users/jason/Dropbox/CARRA/CARRA_rain/"
+
+if os.getlogin() == 'adrien':
+    base_path = "/home/adrien/EO-IO/DEM_4D"
+    sys.path.append("/home/adrien/EO-IO/geomatcher")
+    CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
+
+
+os.chdir(base_path)
+
 import geomatcher.geomatcher as gm
 
 
@@ -31,8 +46,6 @@ def lon360_to_lon180(lon360):
 
     return lon180
 
-
-base_path = "/home/adrien/EO-IO/DEM_4D"
 
 # %% read and preprocess BedMachine
 
@@ -53,8 +66,6 @@ with rasterio.open(
 ni = 1269
 nj = 1069
 
-CARRA_path = "/home/adrien/EO-IO/CARRA_rain"
-
 lat = np.fromfile(
     f"{CARRA_path}/ancil/2.5km_CARRA_west_lat_1269x1069.npy", dtype=np.float32
 )
@@ -74,6 +85,11 @@ elev = np.fromfile(
 )
 elev_CARRA = elev.reshape(ni, nj)
 
+rf = np.fromfile(
+    f"{base_path}/raw/rf_2012_1269x1069_float32.npy", dtype=np.float32
+)
+rf = rf.reshape(ni, nj)
+
 # %% prepare data and apply geomatcher
 
 # reproject to meter space
@@ -86,3 +102,27 @@ bedmachine_grid_m = np.dstack([bedmachine_xs, bedmachine_ys, bedmachine])
 indexes = gm.match_m2m_old(CARRA_grid_m, bedmachine_grid_m, only_indexes=True)
 
 bedmachine_on_CARRA = bedmachine_grid_m[:, :, 2].flatten()[indexes]
+
+#%%
+import matplotlib.pyplot as plt
+
+result=np.flipud(bedmachine_on_CARRA)
+plt.imshow(result)
+
+#%%
+
+profile = rasterio.open(f"{base_path}/raw/BedMachineGreenland-2017-09-20_surface_500m.tiff").profile
+
+wo=1
+
+if wo:
+    with rasterio.open(f"{base_path}./output/bedmachine_on_CARRA.tif", 'w', **profile) as dst:
+        dst.write(result, 1)
+
+    with rasterio.open(f"{base_path}./output/CARRA_elev.tif", 'w', **profile) as dst:
+        dst.write(np.flipud(elev_CARRA), 1)
+
+    with rasterio.open(f"{base_path}./output/CARRA_rf_2012.tif", 'w', **profile) as dst:
+        dst.write(np.flipud(rf), 1)
+
+print("done")
