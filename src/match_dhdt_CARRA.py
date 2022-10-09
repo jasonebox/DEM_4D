@@ -4,6 +4,8 @@
 
 @author: Adrien Wehrlé, University of Zurich, Switzerland
 
+and Jason Box
+
 """
 
 import xarray as xr
